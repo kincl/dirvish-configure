@@ -1,0 +1,15 @@
+---
+- host: 
+  domain: 
+  backups:
+  - name: 
+    remotepath: 
+    volumegroup: dataVG
+
+#- host: 
+#  domain: 
+#  backups:
+#  - name: 
+#    remotepath: 
+#    volumegroup: dataVG
+

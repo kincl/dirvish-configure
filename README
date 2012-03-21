@@ -1,0 +1,79 @@
+What:
+ A script used to configure the Dirvish backup system in a unique way. It will read the YAML config file and check to see if the system is configured, if not it will ask to configure.
+
+Our setup:
+ Since it is difficult to tell rsync to "only include these files" and we do not always want to backup the whole filesystem we create a Dirvish bank for each machine and create various vaults for what we want to back up. For each of these vaults we go one step further by separating each one out as a separate ext3 filesystem so that one backup gone awry by copying 16,000 blu-ray movies from some user's home directory will not affect other backups or any other part of the machine. 
+
+How things look:
+ /backups is the root backup directory
+ Under /backups are the banks, testsystem.example.com
+ Under the bank are the vaults, mysqlbackup, /home, /etc, /var/www
+
+So from a filesystem perspective it would look like:
+
+/backups/testsystem.example.com/
+                                testsystem_mysqlbackup/(YYY-MM-DD, dirvish/)
+                                testsystem_home/
+                                testsystem_etc/
+
+A few notes:
+* Vaults need to have a unique name, that is why there is slight redundancy here
+* All of our machine hostnames are unique so using $hostname_$vaultname works for us, YMMV
+
+Install:
+* Need: Requires Python's YAML and difflib libraries
+* Put dirvish.yaml in /etc/dirvish
+* Modify /etc/dirvish/master.conf and add:
+
+config: /etc/dirvish/bank.conf
+config: /etc/dirvish/vault.conf
+
+* run dirvish-configure.py 
+
+YAML Config file:
+
+Example:
+
+---
+hosts:
+- host: host1
+  domain: example.com
+  backups:
+  - name: etc
+    remotepath: /etc
+    volumegroup: dataVG
+  - name: www
+    remotepath: /var/www
+    volumegroup: dataVG
+  - name: usr_local
+    remotepath: /usr/local
+    volumegroup: dataVG
+  - name: mysql
+    remotepath: /var/backups/mysql
+    volumegroup: dataVG
+- host: host2
+  domain: example.com
+  extra:
+    rsh: ssh -p 2222
+    exclude:
+    - tmp
+    - lost+found/
+  backups:
+  - name: root
+    remotepath: /root
+    volumegroup: dataVG
+
+Explanation:
+*host: the name of the host
+*domain: domain of host
+*(optional) extra: Allows to specify any extra Dirvish option for the config file
+**For example, say I want to specify to use port 2222 for ssh in the dirvish config files for all of my host2.example.com backups, the dirvish config option is rsh: ssh -p2222 so I would put that under the extra: stanza under the host2.example.com host.
+*backups: Placeholder for specifying backups
+*name: name of the backup (the name will become $host_$name)
+*remotepath: the path to back up
+*volumegroup: where to put the logical volume
+*(optional) extra: 
+**You can specify more options for just this backup 
+
+Note: You can specify host-wide exclude: parameters and ALSO backup exclude: parameters since Dirvish concatenates lists
+*When specifying a list for the extra: exclude: parameters, just prefix with a hyphen and a space "- " like in the example
